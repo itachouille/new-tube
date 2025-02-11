@@ -18,7 +18,7 @@ const aj = arcjet({
   ],
 });
 
-const isProtectedRoute = createRouteMatcher(["/protected(.*)"]);
+const isProtectedRoute = createRouteMatcher(["/studio(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   const decision = await aj.protect(req);
