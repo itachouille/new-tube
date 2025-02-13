@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import {
   VideoAssetCreatedWebhookEvent,
+  VideoAssetDeletedWebhookEvent,
   VideoAssetErroredWebhookEvent,
   VideoAssetReadyWebhookEvent,
   VideoAssetTrackReadyWebhookEvent,
@@ -16,7 +17,8 @@ type webhookEvent =
   | VideoAssetCreatedWebhookEvent
   | VideoAssetReadyWebhookEvent
   | VideoAssetErroredWebhookEvent
-  | VideoAssetTrackReadyWebhookEvent;
+  | VideoAssetTrackReadyWebhookEvent
+  | VideoAssetDeletedWebhookEvent;
 
 export const POST = async (req: Request) => {
   if (!SIGNING_SECRET) {
@@ -89,6 +91,54 @@ export const POST = async (req: Request) => {
         .where(eq(videos.muxUploadId, data.upload_id));
       break;
     }
+
+    case "video.asset.errored": {
+      const data = payload.data as VideoAssetErroredWebhookEvent["data"];
+
+      if (!data.upload_id) {
+        return new Response("Missing upload ID", { status: 400 });
+      }
+
+      await db
+        .update(videos)
+        .set({
+          muxStatus: data.status,
+        })
+        .where(eq(videos.muxUploadId, data.upload_id));
+      break;
+    }
+
+    case "video.asset.deleted": {
+      const data = payload.data as VideoAssetDeletedWebhookEvent["data"];
+
+      if (!data.upload_id) {
+        return new Response("Missing upload ID", { status: 400 });
+      }
+
+      await db.delete(videos).where(eq(videos.muxUploadId, data.upload_id));
+      break;
+    }
+
+    case "video.asset.track.ready":
+      {
+        const data =
+          payload.data as VideoAssetTrackReadyWebhookEvent["data"] & {
+            asset_id: string; // Typescript incorrectly says that asset_id does not exist !!!
+          };
+
+        if (!data.asset_id) {
+          return new Response("Missing asset ID", { status: 400 });
+        }
+
+        await db
+          .update(videos)
+          .set({
+            muxTrackId: data.asset_id,
+            muxTrackStatus: data.status,
+          })
+          .where(eq(videos.muxAssetId, data.asset_id));
+      }
+      break;
   }
 
   return new Response("Webhook received", { status: 200 });
