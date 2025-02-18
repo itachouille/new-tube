@@ -1,6 +1,5 @@
 import { VideoView } from "@/modules/videos/ui/views/video-view";
-import { trpc } from "@/trpc/server";
-import { HydrateClient } from "@/trpc/server";
+import { HydrateClient, trpc } from "@/trpc/server";
 
 interface PageProps {
   params: Promise<{
